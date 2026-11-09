@@ -15,7 +15,7 @@ local function resolve(enc, bom)
     if kind then return utf16.codec(kind, bom), kind end
     local cs = sbcs.get(name)
     if cs then return cs.codec, cs end
-    error("charigo: unknown encoding '" .. tostring(enc) .. "'", 3)
+    error("charigo: unknown encoding '" .. tostring(enc) .. "'", 0)
 end
 
 local function bomOf(opts)
