@@ -9,6 +9,14 @@ return function(env)
         eq(type(charigo._VERSION), "string")
     end)
 
+    test("_VERSION matches the release rockspec", function()
+        local f = io.open("charigo-" .. charigo._VERSION .. "-1.rockspec", "rb")
+        if not f then error("no rockspec named for version " .. charigo._VERSION) end
+        local text = f:read("*a")
+        f:close()
+        eq(text:match('\nversion%s*=%s*"([^"]+)"'), charigo._VERSION .. "-1")
+    end)
+
     local names = { "convert", "converter", "decode", "encode", "valid", "detect" }
     for i = 1, #names do
         local name = names[i]
