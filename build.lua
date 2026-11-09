@@ -3,6 +3,7 @@ local OUT_FILE = OUT_DIR .. "/charigo.lua"
 local ENTRY = "charigo/init.lua"
 
 local MODULES = {
+    { req = "charigo.utf8", file = "charigo/utf8.lua", var = "charigoUtf8" },
 }
 
 local reqToVar = {}

@@ -47,6 +47,7 @@ local env = {
 
 local files = {
     "tests/api_test.lua",
+    "tests/utf8_test.lua",
 }
 
 for i = 1, #files do
