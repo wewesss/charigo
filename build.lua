@@ -6,6 +6,7 @@ local MODULES = {
     { req = "charigo.utf8", file = "charigo/utf8.lua", var = "charigoUtf8" },
     { req = "charigo.sbcs", file = "charigo/sbcs.lua", var = "charigoSbcs" },
     { req = "charigo.utf16", file = "charigo/utf16.lua", var = "charigoUtf16" },
+    { req = "charigo.os", file = "charigo/os.lua", var = "charigoOs" },
 }
 
 local reqToVar = {}
