@@ -17,19 +17,12 @@ return function(env)
         end)
     end
 
-    local stubs = { "detect" }
-    for i = 1, #stubs do
-        local name = stubs[i]
-        test(name .. " errors while unimplemented", function()
-            raises(function() charigo[name]() end, "not implemented")
-        end)
-    end
-
     test("decode, encode, valid, convert and converter are implemented", function()
         eq(#charigo.decode("a", "utf-8"), 1)
         eq(charigo.encode({ 97 }, "utf-8"), "a")
         eq(charigo.valid("a", "utf-8"), true)
         eq(charigo.convert("a", "utf-8", "latin1"), "a")
         eq(charigo.converter("utf-8", "latin1")("a"), "a")
+        eq(type(charigo.detect), "function")
     end)
 end

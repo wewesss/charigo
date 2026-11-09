@@ -1,12 +1,9 @@
 local u8 = require("charigo.utf8")
 local sbcs = require("charigo.sbcs")
 local utf16 = require("charigo.utf16")
+local sysos = require("charigo.os")
 
 local charigo = { _VERSION = "0.0.0" }
-
-local function notImplemented()
-    error("not implemented", 2)
-end
 
 local function resolve(enc, bom)
     local name = type(enc) == "string" and enc:lower() or nil
@@ -83,6 +80,10 @@ end
 
 charigo._sbcs = sbcs
 
-charigo.detect = notImplemented
+charigo._os = sysos
+
+function charigo.detect()
+    return sysos.detect()
+end
 
 return charigo

@@ -51,6 +51,7 @@ local files = {
     "tests/sbcs_test.lua",
     "tests/utf16_test.lua",
     "tests/convert_test.lua",
+    "tests/os_test.lua",
 }
 
 for i = 1, #files do
