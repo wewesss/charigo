@@ -3,7 +3,7 @@ local sbcs = require("charigo.sbcs")
 local utf16 = require("charigo.utf16")
 local sysos = require("charigo.os")
 
-local charigo = { _VERSION = "1.0.0" }
+local charigo = { _VERSION = "2.0.0" }
 
 local function resolve(enc, bom)
     local name = type(enc) == "string" and enc:lower() or nil
