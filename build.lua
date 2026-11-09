@@ -4,6 +4,7 @@ local ENTRY = "charigo/init.lua"
 
 local MODULES = {
     { req = "charigo.utf8", file = "charigo/utf8.lua", var = "charigoUtf8" },
+    { req = "charigo.sbcs", file = "charigo/sbcs.lua", var = "charigoSbcs" },
 }
 
 local reqToVar = {}
