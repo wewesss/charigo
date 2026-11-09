@@ -59,27 +59,33 @@ function M.policy(opts)
 end
 
 function M.decode(s, mode)
-    local out, n = {}, 0
     local len = #s
+    if not find(s, HIGH) then
+        local out = {}
+        pushBytes(out, 0, s, 1, len)
+        return out
+    end
+    local out, n = {}, 0
     local i = 1
     while i <= len do
-        local j = find(s, HIGH, i)
-        if not j then
-            n = pushBytes(out, n, s, i, len)
-            break
-        end
-        if j > i then n = pushBytes(out, n, s, i, j - 1) end
-        local cp, used = scan(s, j)
-        if cp then
+        local c = byte(s, i)
+        if c < 0x80 then
             n = n + 1
-            out[n] = cp
-        elseif mode == "strict" then
-            error(("charigo: invalid utf-8 at byte %d"):format(j), 0)
-        elseif mode == "replace" then
-            n = n + 1
-            out[n] = REPLACEMENT
+            out[n] = c
+            i = i + 1
+        else
+            local cp, used = scan(s, i)
+            if cp then
+                n = n + 1
+                out[n] = cp
+            elseif mode == "strict" then
+                error(("charigo: invalid utf-8 at byte %d"):format(i), 0)
+            elseif mode == "replace" then
+                n = n + 1
+                out[n] = REPLACEMENT
+            end
+            i = i + used
         end
-        i = j + used
     end
     return out
 end
