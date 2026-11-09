@@ -19,8 +19,11 @@ return function(env)
         }
     end
 
-    local function fakePopen(output)
-        return function()
+    local function fakePopen(reg, chcp)
+        return function(command)
+            local output = command:find("^reg ") and reg or chcp
+            if output == nil then error("boom") end
+            if output == false then return nil end
             return { read = function() return output end, close = function() end }
         end
     end
@@ -100,50 +103,74 @@ return function(env)
         eq(info.console_codepage, 65001)
     end)
 
-    test("windows ffi failure falls back to chcp", function()
+    test("windows ffi failure falls back to the registry", function()
         local broken = { cdef = function() end, C = {} }
         local enc, info = sysos.detect({
-            is_windows = true, ffi = broken, popen = fakePopen("Active code page: 65001"),
+            is_windows = true, ffi = broken,
+            popen = fakePopen("    ACP    REG_SZ    1252", "Active code page: 65001"),
         })
-        eq(enc, "utf-8")
-        eq(info.source, "chcp")
+        eq(enc, "cp1252")
+        eq(info.source, "reg")
     end)
 
-    test("windows chcp localized output", function()
+    test("windows without ffi reads ACP from the registry and console from chcp", function()
         local enc, info = sysos.detect({
-            is_windows = true, ffi = false, popen = fakePopen("Page de codes active : 850\n"),
+            is_windows = true, ffi = false,
+            popen = fakePopen("    ACP    REG_SZ    1252", "Page de codes active : 850\n"),
         })
-        eq(enc, nil)
-        eq(info.source, "chcp")
-        eq(info.codepage, 850)
+        eq(enc, "cp1252")
+        eq(info.source, "reg")
+        eq(info.codepage, 1252)
+        eq(info.console, nil)
         eq(info.console_codepage, 850)
-        eq(info.raw, "850")
+        eq(info.raw, "1252")
     end)
 
-    test("windows chcp utf-8", function()
+    test("windows without ffi utf-8", function()
         local enc, info = sysos.detect({
-            is_windows = true, ffi = false, popen = fakePopen("Active code page: 65001"),
+            is_windows = true, ffi = false,
+            popen = fakePopen("    ACP    REG_SZ    65001", "Active code page: 65001"),
         })
         eq(enc, "utf-8")
         eq(info.console, "utf-8")
-        eq(info.codepage, 65001)
     end)
 
-    test("windows popen failing gives source none", function()
-        local _, info = sysos.detect({
-            is_windows = true, ffi = false, popen = function() error("boom") end,
+    test("windows registry failing leaves only the console code page", function()
+        for _, reg in ipairs({ "garbage", false }) do
+            local enc, info = sysos.detect({
+                is_windows = true, ffi = false,
+                popen = fakePopen(reg, "Active code page: 850"),
+            })
+            eq(enc, nil)
+            eq(info.source, "chcp")
+            eq(info.codepage, nil)
+            eq(info.console_codepage, 850)
+            eq(info.raw, "850")
+        end
+    end)
+
+    test("windows registry alone gives source reg", function()
+        local enc, info = sysos.detect({
+            is_windows = true, ffi = false,
+            popen = fakePopen("    ACP    REG_SZ    1252", "oops"),
         })
-        eq(info.source, "none")
-        local enc, info2 = sysos.detect({ is_windows = true, ffi = false, popen = function() return nil end })
+        eq(enc, "cp1252")
+        eq(info.source, "reg")
+        eq(info.console_codepage, nil)
+    end)
+
+    test("windows without any answer gives source none", function()
+        local enc, info = sysos.detect({
+            is_windows = true, ffi = false, popen = fakePopen(nil, nil),
+        })
         eq(enc, nil)
+        eq(info.source, "none")
+        eq(info.codepage, nil)
+        eq(info.raw, nil)
+        local _, info2 = sysos.detect({ is_windows = true, ffi = false, popen = fakePopen("x", "oops") })
         eq(info2.source, "none")
         local _, info3 = sysos.detect({ is_windows = true, ffi = false, popen = false })
         eq(info3.source, "none")
-    end)
-
-    test("windows chcp without a number gives source none", function()
-        local _, info = sysos.detect({ is_windows = true, ffi = false, popen = fakePopen("oops") })
-        eq(info.source, "none")
     end)
 
     test("real detect returns without error", function()

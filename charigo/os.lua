@@ -25,6 +25,7 @@ local function pick(deps, key, default)
 end
 
 local function defaultIsWindows()
+    local jit = rawget(_G, "jit")
     if type(jit) == "table" and jit.os then return jit.os == "Windows" end
     return package.config:sub(1, 1) == "\\"
 end
@@ -46,18 +47,30 @@ local function fromFfi(ffi)
     if ok and acp then return acp, console end
 end
 
-local function fromChcp(popen)
+local function run(popen, command)
     local ok, out = pcall(function()
-        local f = popen("chcp")
+        local f = popen(command)
         if not f then return nil end
         local text = f:read("*a")
         f:close()
         return text
     end)
-    if not ok or type(out) ~= "string" then return nil end
+    if ok and type(out) == "string" then return out end
+end
+
+local function fromChcp(popen)
+    local out = run(popen, "chcp")
+    if not out then return nil end
     local last
     for token in out:gmatch("%d+") do last = token end
     if last then return tonumber(last), last end
+end
+
+local function fromRegistry(popen)
+    local out = run(popen, [[reg query "HKLM\SYSTEM\CurrentControlSet\Control\Nls\CodePage" /v ACP]])
+    if not out then return nil end
+    local token = out:match("REG_SZ%s+(%d+)")
+    if token then return tonumber(token), token end
 end
 
 local function windows(deps, info)
@@ -76,14 +89,15 @@ local function windows(deps, info)
     end
     local popen = pick(deps, "popen", defaultPopen)
     if popen then
-        local cp, token = fromChcp(popen)
-        if cp then
-            info.source = "chcp"
-            info.codepage = cp
-            info.console_codepage = cp
-            info.raw = token
-            info.console = CODEPAGES[cp]
-            return CODEPAGES[cp]
+        local acp, acpToken = fromRegistry(popen)
+        local console, consoleToken = fromChcp(popen)
+        if acp or console then
+            info.source = acp and "reg" or "chcp"
+            info.codepage = acp
+            info.console_codepage = console
+            info.console = console and CODEPAGES[console] or nil
+            info.raw = acpToken or consoleToken
+            return acp and CODEPAGES[acp] or nil
         end
     end
 end
