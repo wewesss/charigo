@@ -53,7 +53,7 @@ function M.policy(opts)
     local e = opts and opts.errors
     if e == nil then return "strict" end
     if not POLICIES[e] then
-        error("charigo: unknown errors policy '" .. tostring(e) .. "'", 3)
+        error("charigo: unknown errors policy '" .. tostring(e) .. "'", 0)
     end
     return e
 end
