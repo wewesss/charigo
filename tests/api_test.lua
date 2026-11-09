@@ -17,7 +17,17 @@ return function(env)
         end)
     end
 
-    test("convert errors while unimplemented", function()
-        raises(function() charigo.convert("a", "utf8", "latin1") end, "not implemented")
+    local stubs = { "convert", "converter", "detect" }
+    for i = 1, #stubs do
+        local name = stubs[i]
+        test(name .. " errors while unimplemented", function()
+            raises(function() charigo[name]("a", "utf8", "latin1") end, "not implemented")
+        end)
+    end
+
+    test("decode, encode and valid are implemented", function()
+        eq(#charigo.decode("a", "utf-8"), 1)
+        eq(charigo.encode({ 97 }, "utf-8"), "a")
+        eq(charigo.valid("a", "utf-8"), true)
     end)
 end
