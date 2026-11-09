@@ -57,3 +57,35 @@ jobs:
           name: charigo-lua
           path: dist/charigo.lua
           if-no-files-found: error
+
+  bench-smoke:
+    name: Bench smoke (${{ matrix.lua }})
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        lua:
+          - "5.1"
+          - "5.4"
+          - "luajit-openresty"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Lua ${{ matrix.lua }}
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: ${{ matrix.lua }}
+
+      - name: Symlink luajit to lua (LuaJIT cells only)
+        if: contains(matrix.lua, 'luajit')
+        run: |
+          set -euo pipefail
+          luajit_path="$(command -v luajit)"
+          sudo ln -sf "${luajit_path}" /usr/local/bin/lua
+          lua -v
+
+      - name: Run the bench (smoke configuration)
+        run: lua bench/run.lua --smoke
