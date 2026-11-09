@@ -2,7 +2,7 @@
 
 All notable changes to charigo are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] - 2026-11-09
+## [2.0.0] - 2026-11-09
 
 First stable release and full rewrite. Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT 2.1, zero dependency.
 
@@ -15,14 +15,14 @@ First stable release and full rewrite. Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT 2.1, ze
 - CP1252 bytes 0x81, 0x8D, 0x8F, 0x90 and 0x9D map to the C1 controls U+0081, U+008D, U+008F, U+0090 and U+009D (WHATWG), so every byte decodes and the mapping round-trips.
 - `detect()` returns the system encoding and an `info` table: `GetACP` and `GetConsoleOutputCP` through `ffi` under LuaJIT on Windows, the registry and `chcp` otherwise, `LC_ALL`, `LC_CTYPE` then `LANG` on POSIX.
 - Performance: single-byte sets convert to UTF-8 with `gsub` on a table, ASCII-only input takes a `find` shortcut, converters are cached by `convert`.
-- Modules `charigo/{init,utf8,sbcs,utf16,os}.lua`, the single-file bundle `dist/charigo.lua` built by `build.lua`, the `charigo-1.0.0-1` rockspec, English and French guides in `doc/`.
+- Modules `charigo/{init,utf8,sbcs,utf16,os}.lua`, the single-file bundle `dist/charigo.lua` built by `build.lua`, the `charigo-2.0.0-1` rockspec, English and French guides in `doc/`.
 - Tests: a suite run on Lua 5.1 to 5.4 and LuaJIT in CI, a fixed-seed fuzz test (`tests/fuzz_test.lua`), and a benchmark (`bench/run.lua`, with a `--smoke` mode run in CI).
 
 ### Removed
 
 - `map.lua` (`lua-charset-converter`) and its method-based API, without a compatibility shim.
 
-### Migration from `map` (lua-charset-converter)
+### Migration from 1.0.0 (`map`)
 
 | Before | Now |
 | --- | --- |
@@ -40,4 +40,9 @@ Behaviour changes to know about:
 - Invalid UTF-8 (overlong forms, surrogates, values above U+10FFFF, truncated sequences) used to be accepted or cut silently. It now raises `charigo: invalid utf-8 at byte N` unless a policy says otherwise.
 - `utf8ToUnicode` read one character at a given position; `decode` converts the whole string at once.
 
+## [1.0.0] - 2024-10-25
+
+The legacy `map` module, released as lua-charset-converter.
+
+[2.0.0]: https://github.com/wewesss/charigo/releases/tag/v2.0.0
 [1.0.0]: https://github.com/wewesss/charigo/releases/tag/v1.0.0

@@ -2,7 +2,7 @@
 
 Conversion de jeux de caractères pour Lua 5.1, 5.2, 5.3, 5.4 et LuaJIT. Lua pur, sans dépendance, sans état global.
 
-Version 1.0.0. Version anglaise : [en.md](./en.md).
+Version 2.0.0. Version anglaise : [en.md](./en.md).
 
 ## Installation
 
@@ -100,7 +100,7 @@ Voir [Détecter l'encodage du système](#détecter-lencodage-du-système).
 
 ### `charigo._VERSION`
 
-La chaîne `"1.0.0"`. `charigo._sbcs` et `charigo._os` sont internes et n'existent que pour les tests.
+La chaîne `"2.0.0"`. `charigo._sbcs` et `charigo._os` sont internes et n'existent que pour les tests.
 
 ### Options
 

@@ -2,7 +2,7 @@
 
 Character set conversion for Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT. Pure Lua, no dependency, no global state.
 
-Version 1.0.0. French version: [fr.md](./fr.md).
+Version 2.0.0. French version: [fr.md](./fr.md).
 
 ## Install
 
@@ -100,7 +100,7 @@ See [Detecting the system encoding](#detecting-the-system-encoding).
 
 ### `charigo._VERSION`
 
-The string `"1.0.0"`. `charigo._sbcs` and `charigo._os` are internal and exist for the tests only.
+The string `"2.0.0"`. `charigo._sbcs` and `charigo._os` are internal and exist for the tests only.
 
 ### Options
 
