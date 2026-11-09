@@ -166,7 +166,7 @@ return function(env)
     end)
 
     test("unknown encoding raises", function()
-        raises(function() charigo.decode("a", "latin1") end, "charigo: unknown encoding 'latin1'")
+        raises(function() charigo.decode("a", "koi8-r") end, "charigo: unknown encoding 'koi8-r'")
         raises(function() charigo.encode({ 97 }, "nope") end, "charigo: unknown encoding 'nope'")
         raises(function() charigo.valid("a") end, "charigo: unknown encoding 'nil'")
     end)

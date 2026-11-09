@@ -1,4 +1,5 @@
 local u8 = require("charigo.utf8")
+local sbcs = require("charigo.sbcs")
 
 local charigo = { _VERSION = "0.0.0" }
 
@@ -9,6 +10,8 @@ end
 local function resolve(enc)
     local name = type(enc) == "string" and enc:lower() or nil
     if name == "utf-8" or name == "utf8" then return u8 end
+    local cs = sbcs.get(name)
+    if cs then return cs.codec end
     error("charigo: unknown encoding '" .. tostring(enc) .. "'", 3)
 end
 
@@ -25,6 +28,8 @@ end
 function charigo.valid(s, enc)
     return resolve(enc).valid(s)
 end
+
+charigo._sbcs = sbcs
 
 charigo.convert = notImplemented
 charigo.converter = notImplemented
