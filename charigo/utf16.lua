@@ -1,6 +1,6 @@
 local u8 = require("charigo.utf8")
 
-local byte, char, find, gsub = string.byte, string.char, string.find, string.gsub
+local byte, char, find, gsub, sub = string.byte, string.char, string.find, string.gsub, string.sub
 local concat, unpack = table.concat, unpack or table.unpack
 local floor = math.floor
 
@@ -188,6 +188,72 @@ function M.fromUtf8(kind, bom)
         end
         if not u8.valid(s) then return nil end
         return prefix .. (gsub(s, SEQUENCE, memo))
+    end
+end
+
+local function utf8Of(u)
+    if u < 0x80 then return char(u) end
+    if u < 0x800 then
+        return char(0xC0 + floor(u / 64), 0x80 + u % 64)
+    end
+    return char(0xE0 + floor(u / 4096), 0x80 + floor(u / 64) % 64, 0x80 + u % 64)
+end
+
+local missed = false
+local decodeMemos = {}
+
+local function decodeMemo(be)
+    local key = be and "be" or "le"
+    local cached = decodeMemos[key]
+    if cached then return cached end
+    local size = 0
+    cached = setmetatable({}, {
+        __index = function(t, pair)
+            local a, b = byte(pair, 1, 2)
+            local u
+            if be then u = a * 256 + b else u = b * 256 + a end
+            if u >= 0xD800 and u <= 0xDFFF then
+                missed = true
+                return ""
+            end
+            local v = utf8Of(u)
+            if size < MEMO_LIMIT then
+                size = size + 1
+                rawset(t, pair, v)
+            end
+            return v
+        end,
+    })
+    decodeMemos[key] = cached
+    return cached
+end
+
+function M.toUtf8(kind)
+    local order = kind.order
+    return function(s)
+        local len = #s
+        local be = order == "be"
+        local i = 1
+        if len >= 2 then
+            local a, b = byte(s, 1, 2)
+            if a == 0xFF and b == 0xFE and order ~= "be" then
+                be = false
+                i = 3
+            elseif a == 0xFE and b == 0xFF and order ~= "le" then
+                be = true
+                i = 3
+            end
+        end
+        if (len - i + 1) % 2 ~= 0 then return nil end
+        local rest = s
+        if i > 1 then rest = sub(s, i) end
+        missed = false
+        local out = gsub(rest, "..", decodeMemo(be))
+        if missed then
+            missed = false
+            return nil
+        end
+        return out
     end
 end
 

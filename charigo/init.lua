@@ -65,6 +65,12 @@ function charigo.converter(from, to, opts)
             return fast(s) or encode(decode(s, mode), mode)
         end
     end
+    if not JIT and srcId.order and dstId == u8 then
+        local fast = utf16.toUtf8(srcId)
+        return function(s)
+            return fast(s) or encode(decode(s, mode), mode)
+        end
+    end
     return function(s)
         return encode(decode(s, mode), mode)
     end

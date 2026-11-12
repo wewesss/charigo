@@ -9,6 +9,7 @@ Runtimes: `lua` is Lua 5.4, `lua5.3` is Lua 5.3, `luajit` is LuaJIT 2.1 (all fro
 - Every runtime: UTF-8 to Latin-1 or CP1252 returns ASCII input as is.
 - PUC Lua only (not LuaJIT, where `gsub` on non-ASCII input is slower than the plain loop): UTF-8 to a single-byte set and UTF-8 to UTF-16 go through `gsub` on a table.
 - Lua 5.4 only: `charigo.valid(s, "utf-8")` calls the native `utf8.len` first.
+- PUC Lua only: UTF-16 (LE, BE or with BOM) to UTF-8 goes through `gsub` on a two-byte table, with a bounded memo. Input with a surrogate (a pair or a lone one) or an odd length falls back to the generic path, which keeps its errors and policies.
 
 ## Before and after
 
@@ -69,9 +70,24 @@ luajit bench/run.lua
 | small convert utf-8 -> utf-16le | emoji | 39.2 | 39.9 | 1.02x |
 | small converter utf-8 -> utf-16le | emoji | 39.7 | 40.7 | 1.03x |
 
+### UTF-16 to UTF-8 fast path
+
+Before is `main` at commit 126e2b2, after is the `perf-utf16-decode` branch, same `bench/run.lua`, 3 runs each, best value per row. The 3 before runs were made first, then the 3 after runs, so a ratio between 0.85 and 1.15 is noise. Input is UTF-16LE, `convert utf-16le -> utf-8`.
+
+| runtime | input | before MB/s | after MB/s | ratio |
+| --- | --- | ---: | ---: | ---: |
+| Lua 5.4 | ascii | 16.5 | 80.0 | 4.85x |
+| Lua 5.4 | french | 16.2 | 73.9 | 4.56x |
+| Lua 5.4 | emoji | 14.4 | 11.5 | 0.80x |
+| LuaJIT 2.1 | ascii | 102.8 | 109.5 | 1.07x |
+| LuaJIT 2.1 | french | 113.4 | 114.5 | 1.01x |
+| LuaJIT 2.1 | emoji | 93.9 | 94.3 | 1.00x |
+
+The `emoji` input holds surrogate pairs, so the fast path runs `gsub` to the end, sees the miss flag and falls back to the generic path: that costs about 20 percent on PUC Lua for text with characters outside the BMP. LuaJIT does not use the fast path. One LuaJIT after run came out at 64 to 74 MB/s on these rows, an outlier on this machine that the other two runs do not show.
+
 ## Against other tools
 
-`bench/compare.lua` runs the same inputs and timer against the native `utf8` library (Lua 5.3+), lua-iconv, and the Win32 conversion functions through LuaJIT ffi. A tool that cannot load prints `absent (<reason>)`. lua-iconv is not installed on this machine, so no iconv figure is available. The Win32 rows include the buffer allocation and the copy back to a Lua string. `utf8.len`, `utf8.codes` and `utf8.char` are the native baseline; charigo is compared on the same work. On Lua 5.3 `charigo.valid` stays on the pure Lua scan, because the 5.3 `utf8.len` accepts surrogates.
+`bench/compare.lua` runs the same inputs and timer against the native `utf8` library (Lua 5.3+), lua-iconv, and the Win32 conversion functions through LuaJIT ffi. A tool that cannot load prints `absent (<reason>)`. lua-iconv is only built for Lua 5.4 here, so the Lua 5.3 and LuaJIT runs report it as absent. The Win32 rows include the buffer allocation and the copy back to a Lua string. `utf8.len`, `utf8.codes` and `utf8.char` are the native baseline; charigo is compared on the same work. On Lua 5.3 `charigo.valid` stays on the pure Lua scan, because the 5.3 `utf8.len` accepts surrogates.
 
 Commands:
 
@@ -96,8 +112,36 @@ Runtime: Lua 5.4. Date: 2026-11-12. Input ~1048576 bytes. Ratio = charigo / comp
 | validate utf-8 | emoji | 840.0 | utf8 (native) | 945.3 | 0.89x |
 | utf-8 -> code points | emoji | 19.2 | utf8 (native) | 44.6 | 0.43x |
 | code points -> utf-8 | emoji | 15.6 | utf8 (native) | 43.1 | 0.36x |
-| (all) | - | - | lua-iconv | absent (module 'iconv' not found:) | - |
 | (all) | - | - | Win32 API (ffi) | absent (needs LuaJIT with ffi) | - |
+
+### lua-iconv
+
+lua-iconv 7, built locally against Lua 5.4 and the msys2 libiconv on Windows 11, 2026-11-12. Command, from the repository root, with the built module on `LUA_CPATH`:
+
+```sh
+LUA_CPATH="<build dir>/?.dll;;" lua bench/compare.lua
+```
+
+iconv is C and is expected to be faster. The point of this table is the size of the gap, not a contest. Ratio = charigo / lua-iconv, input about 1 MiB, best of 3 samples, charigo with the fast paths of this branch.
+
+| scenario | input | charigo MB/s | lua-iconv MB/s | ratio |
+| --- | --- | ---: | ---: | ---: |
+| utf-8 -> cp1252 | ascii | 133.7 | 300.5 | 0.44x |
+| utf-8 -> cp1252 | french | 71.4 | 335.0 | 0.21x |
+| cp1252 -> utf-8 | ascii | 137.9 | 297.0 | 0.46x |
+| cp1252 -> utf-8 | french | 82.5 | 310.2 | 0.27x |
+| utf-8 -> latin1 | ascii | 135.3 | 308.5 | 0.44x |
+| utf-8 -> latin1 | latin1 | 73.2 | 313.5 | 0.23x |
+| latin1 -> utf-8 | ascii | 136.6 | 341.6 | 0.40x |
+| latin1 -> utf-8 | latin1 | 83.5 | 337.1 | 0.25x |
+| utf-8 -> utf-16le | ascii | 32.9 | 262.4 | 0.13x |
+| utf-8 -> utf-16le | french | 25.5 | 277.2 | 0.09x |
+| utf-8 -> utf-16le | emoji | 33.7 | 348.3 | 0.10x |
+| utf-16le -> utf-8 | ascii | 76.9 | 607.9 | 0.13x |
+| utf-16le -> utf-8 | french | 72.2 | 586.4 | 0.12x |
+| utf-16le -> utf-8 | emoji | 10.8 | 546.9 | 0.02x |
+
+In short: lua-iconv is about 2 to 5 times faster on single-byte sets and about 8 to 11 times faster on UTF-16 (about 50 times on UTF-16 holding surrogate pairs, which take the generic path in charigo).
 
 ### `lua5.3 bench/compare.lua`
 
