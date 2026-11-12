@@ -12,7 +12,9 @@ Avec LuaRocks :
 luarocks install charigo
 ```
 
-Sans LuaRocks, deux possibilités : copier le dossier `charigo/` (cinq modules : `init`, `utf8`, `sbcs`, `utf16`, `os`) dans votre `package.path`, ou copier le bundle en un seul fichier. Le bundle est généré à partir des sources et n'est pas versionné :
+Depuis une release GitHub : téléchargez `charigo-vX.Y.Z.zip` depuis la [dernière release](https://github.com/wewesss/charigo/releases/latest). Elle contient `charigo.lua` (le bundle en un seul fichier), `LICENSE` et un court `README.md`. Posez `charigo.lua` sur votre `package.path`, ou chargez-le avec `dofile`.
+
+Depuis les sources, deux possibilités : copier le dossier `charigo/` (cinq modules : `init`, `utf8`, `sbcs`, `utf16`, `os`) dans votre `package.path`, ou copier le bundle en un seul fichier. Le bundle est généré à partir des sources et n'est pas versionné :
 
 ```
 lua build.lua

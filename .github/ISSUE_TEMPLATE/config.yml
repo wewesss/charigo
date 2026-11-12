@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/wewesss/charigo/blob/main/doc/en.md
+    about: Read the guide before opening an issue.
