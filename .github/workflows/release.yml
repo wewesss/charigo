@@ -78,4 +78,5 @@ jobs:
             echo "Missing ${rockspec}" >&2
             exit 1
           fi
+          luarocks install dkjson
           luarocks upload "${rockspec}" --api-key="${LUAROCKS_API_KEY}"
