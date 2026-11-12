@@ -19,7 +19,7 @@ First stable release and full rewrite. Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT 2.1, ze
 - Tests: a suite run on Lua 5.1 to 5.4 and LuaJIT in CI, a fixed-seed fuzz test (`tests/fuzz_test.lua`), and a benchmark (`bench/run.lua`, with a `--smoke` mode run in CI).
 - Fast paths: ASCII-only UTF-8 to Latin-1 or CP1252 returns the input on every runtime. On PUC Lua, UTF-8 to a single-byte set, UTF-8 to UTF-16 and UTF-16 to UTF-8 go through `gsub` on a table (bounded memo for UTF-16), with a fallback to the generic path on invalid input, unmappable characters, surrogates and odd lengths, so errors and policies behave the same on every path. LuaJIT keeps the plain loops, which it compiles. On Lua 5.4, `valid` calls the native `utf8.len` first and falls back to the Lua scan for the error position.
 - `bench/compare.lua`, which compares charigo with the native `utf8` library, lua-iconv and the Win32 API through LuaJIT ffi, and `bench/RESULTS.md` with local results and where each gap comes from.
-- README in English and French with a "Why charigo (and when not to use it)" section, release workflow (GitHub release with the bundle on a `v*` tag, optional LuaRocks upload), contributing guide, security policy, issue and pull request templates.
+- README in English and French with a "Why charigo (and when not to use it)" section, release workflows (a draft GitHub release with the bundle on a `v*` tag, the LuaRocks upload when the release is published), contributing guide, security policy, issue and pull request templates.
 
 ### Removed
 

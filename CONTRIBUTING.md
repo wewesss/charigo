@@ -36,9 +36,9 @@ Run the first three before opening a pull request. The smoke benchmark only chec
 2. Merge to `main` once CI is green.
 3. Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
 4. The `Release` workflow builds the bundle, runs the tests against it and creates a draft release with `charigo-vX.Y.Z.zip`. Review the generated notes and publish the draft.
-5. If the `LUAROCKS_API_KEY` secret is set, the same workflow uploads `charigo-X.Y.Z-1.rockspec` to LuaRocks.
+5. Publishing the release starts the `Publish to LuaRocks` workflow, which uploads `charigo-X.Y.Z-1.rockspec` when the `LUAROCKS_API_KEY` secret is set. It skips the upload when that version is already on LuaRocks.
 
-The workflow can also be started by hand (Actions, Release, Run workflow) with the name of an existing tag.
+Both workflows can also be started by hand (Actions, Run workflow) with the name of an existing tag.
 
 ## Licensing of contributions
 
