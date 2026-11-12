@@ -20,6 +20,25 @@ Une bibliothèque de conversion de jeux de caractères pour Lua 5.1, 5.2, 5.3, 5
 
 ---
 
+## ⚖️ Pourquoi charigo (et quand ne pas l'utiliser)
+
+charigo est en Lua pur : un seul fichier ou cinq modules, sans compilateur C, sans libiconv, sans `ffi` obligatoire. Son intérêt est de tourner là où l'on ne peut pas charger de modules C : Lua embarqué ou en bac à sable (modding et scripting de jeux, hôtes de plugins, environnements restreints qui n'acceptent que des sources Lua).
+
+**Si vous pouvez charger des modules C, utilisez lua-iconv.** Il est plus rapide (environ 2 à 5 fois sur les jeux à un octet, environ 8 à 11 fois sur UTF-16, mesuré dans [bench/RESULTS.md](./bench/RESULTS.md), en anglais) et il gère des centaines d'encodages. charigo ne battra pas le C.
+
+Ce que charigo apporte en plus :
+
+- Des erreurs avec la position et la cause (`invalid utf-8 at byte N`, `cannot encode U+20AC in latin1 at index N`), là où iconv renvoie un code et la sortie partielle.
+- Les politiques `replace` (U+FFFD, ou `?` vers un jeu à un octet) et `skip`.
+- Les octets non définis de CP1252 associés aux contrôles C1 (WHATWG), là où libiconv les refuse.
+- `detect()` pour l'encodage du système.
+
+Les deux refusent les surrogates, les formes trop longues et les séquences tronquées.
+
+Ce qu'iconv a et que charigo n'a pas aujourd'hui : bien plus d'encodages, `//TRANSLIT`, et la conversion incrémentale (par morceaux).
+
+---
+
 ## 🚀 Démarrage rapide
 
 ```lua
@@ -137,9 +156,9 @@ lua tests/run.lua dist       # même suite contre le bundle
 
 ## ⚡ Performance
 
-charigo choisit son chemin rapide selon l'environnement. Sur Lua PUC, UTF-8 vers Latin-1, CP1252 et UTF-16 passent par `gsub` sur une table, et sur Lua 5.4 `valid` appelle d'abord le `utf8.len` natif. Sur LuaJIT, les boucles simples restent, avec seulement un raccourci pour l'ASCII.
+charigo choisit son chemin rapide selon l'environnement. Sur Lua PUC, UTF-8 vers Latin-1, CP1252 et UTF-16, et UTF-16 vers UTF-8, passent par `gsub` sur une table, et sur Lua 5.4 `valid` appelle d'abord le `utf8.len` natif. Sur LuaJIT, les boucles simples restent, avec seulement un raccourci pour l'ASCII.
 
-Mesures locales sur Lua 5.4, avant et après : `valid` sur du texte français de 38 à 876 Mo/s, UTF-8 vers CP1252 sur de l'ASCII de 15 à 137 Mo/s, UTF-8 vers UTF-16LE sur du texte français de 7 à 26 Mo/s. Sur LuaJIT, UTF-8 vers CP1252 sur de l'ASCII passe de 44 à 251 Mo/s.
+Mesures locales sur Lua 5.4, avant et après : `valid` sur du texte français de 38 à 876 Mo/s, UTF-8 vers CP1252 sur de l'ASCII de 15 à 137 Mo/s, UTF-8 vers UTF-16LE sur du texte français de 7 à 26 Mo/s, UTF-16LE vers UTF-8 sur du texte français de 16 à 74 Mo/s. Sur LuaJIT, UTF-8 vers CP1252 sur de l'ASCII passe de 44 à 251 Mo/s.
 
 Ce sont les chiffres d'une seule machine, pas de la CI. Les tableaux complets, les commandes et la comparaison avec la bibliothèque `utf8` native, lua-iconv et l'API Win32 sont dans [bench/RESULTS.md](./bench/RESULTS.md) (en anglais).
 
