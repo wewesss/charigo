@@ -20,7 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
-      LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
     steps:
       - name: Checkout the tag
         uses: actions/checkout@v4
@@ -63,20 +62,3 @@ jobs:
           draft: true
           generate_release_notes: true
           files: release/charigo-${{ env.REF_NAME }}.zip
-
-      - name: Set up LuaRocks
-        if: env.LUAROCKS_API_KEY != ''
-        uses: leafo/gh-actions-luarocks@v4
-
-      - name: Upload to LuaRocks
-        if: env.LUAROCKS_API_KEY != ''
-        run: |
-          set -euo pipefail
-          version="${REF_NAME#v}"
-          rockspec="charigo-${version}-1.rockspec"
-          if [ ! -f "${rockspec}" ]; then
-            echo "Missing ${rockspec}" >&2
-            exit 1
-          fi
-          luarocks install dkjson
-          luarocks upload "${rockspec}" --api-key="${LUAROCKS_API_KEY}"
