@@ -143,6 +143,18 @@ iconv is C and is expected to be faster. The point of this table is the size of 
 
 In short: lua-iconv is about 2 to 5 times faster on single-byte sets and about 8 to 11 times faster on UTF-16 (about 50 times on UTF-16 holding surrogate pairs, which take the generic path in charigo).
 
+### Why these gaps, and why they do not decide the choice
+
+charigo is not trying to beat C, and pure Lua cannot. These tables exist to show what the pure Lua choice costs, so you can decide with numbers. The reason to pick charigo is where it can run: sandboxed or embedded Lua that cannot load a C module, where lua-iconv is simply not available. If your runtime can load C modules, use lua-iconv. See the "Why charigo (and when not to use it)" section of the [README](../README.md).
+
+Where each gap comes from:
+
+- **Single-byte sets (2 to 5 times).** charigo hands the work to `string.gsub` with a lookup table, so the scan itself runs in the C code of the Lua VM. Each non-ASCII character still costs a Lua table lookup and a new piece of string, while iconv writes the bytes straight into a buffer.
+- **UTF-16 (8 to 11 times).** Every character changes width (1 byte becomes 2, or the reverse), so even ASCII input needs one replacement per character. There is no "return the input unchanged" shortcut, as there is towards Latin-1 or CP1252.
+- **UTF-16 with surrogate pairs (about 50 times).** These take the generic path (decode to an array of code points, then encode) so that errors, `replace` and `skip` behave exactly as on every other path. This is the next optimisation candidate.
+- **Native `utf8` library (0.4 to 0.8 times on code points).** `utf8.codes` and `utf8.char` are C. charigo builds the code point array in Lua with strict RFC 3629 checks. Validation is level on Lua 5.4 because charigo calls the native `utf8.len` itself there. Lua 5.3 stays on the pure Lua scan, 10 to 30 times slower, because its `utf8.len` accepts surrogates.
+- **LuaJIT.** The `gsub` fast paths are turned off, because LuaJIT does not compile `gsub` and its compiled byte loops are faster than `gsub` there.
+
 ### `lua5.3 bench/compare.lua`
 
 Runtime: Lua 5.3. Date: 2026-11-12. Input ~1048576 bytes. Ratio = charigo / competitor.
