@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release (for example v2.0.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and draft the release
+    runs-on: ubuntu-latest
+    env:
+      REF_NAME: ${{ github.event.inputs.tag || github.ref_name }}
+      LUAROCKS_API_KEY: ${{ secrets.LUAROCKS_API_KEY }}
+    steps:
+      - name: Checkout the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Checkout the release bundle readme
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-ref
+          sparse-checkout: .github/release-readme.md
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Lua 5.4
+        uses: leafo/gh-actions-lua@v10
+        with:
+          luaVersion: "5.4"
+
+      - name: Build the bundle
+        run: lua build.lua
+
+      - name: Run tests against the bundle
+        run: lua tests/run.lua dist
+
+      - name: Stage the release archive
+        run: |
+          set -euo pipefail
+          stage="release/charigo-${REF_NAME}"
+          mkdir -p "${stage}"
+          cp dist/charigo.lua "${stage}/charigo.lua"
+          cp LICENSE "${stage}/LICENSE"
+          cp workflow-ref/.github/release-readme.md "${stage}/README.md"
+          (cd release && zip -r "charigo-${REF_NAME}.zip" "charigo-${REF_NAME}")
+
+      - name: Create the draft release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.REF_NAME }}
+          draft: true
+          generate_release_notes: true
+          files: release/charigo-${{ env.REF_NAME }}.zip
+
+      - name: Set up LuaRocks
+        if: env.LUAROCKS_API_KEY != ''
+        uses: leafo/gh-actions-luarocks@v4
+
+      - name: Upload to LuaRocks
+        if: env.LUAROCKS_API_KEY != ''
+        run: |
+          set -euo pipefail
+          version="${REF_NAME#v}"
+          rockspec="charigo-${version}-1.rockspec"
+          if [ ! -f "${rockspec}" ]; then
+            echo "Missing ${rockspec}" >&2
+            exit 1
+          fi
+          luarocks upload "${rockspec}" --api-key="${LUAROCKS_API_KEY}"

@@ -2,6 +2,12 @@
 
 All notable changes to charigo are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- README badges, French README, release workflow, community files.
+
 ## [2.0.0] - 2026-11-09
 
 First stable release and full rewrite. Lua 5.1, 5.2, 5.3, 5.4 and LuaJIT 2.1, zero dependency.
