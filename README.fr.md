@@ -135,6 +135,14 @@ lua tests/run.lua            # suite de tests contre les sources
 lua tests/run.lua dist       # même suite contre le bundle
 ```
 
+## ⚡ Performance
+
+charigo choisit son chemin rapide selon l'environnement. Sur Lua PUC, UTF-8 vers Latin-1, CP1252 et UTF-16 passent par `gsub` sur une table, et sur Lua 5.4 `valid` appelle d'abord le `utf8.len` natif. Sur LuaJIT, les boucles simples restent, avec seulement un raccourci pour l'ASCII.
+
+Mesures locales sur Lua 5.4, avant et après : `valid` sur du texte français de 38 à 876 Mo/s, UTF-8 vers CP1252 sur de l'ASCII de 15 à 137 Mo/s, UTF-8 vers UTF-16LE sur du texte français de 7 à 26 Mo/s. Sur LuaJIT, UTF-8 vers CP1252 sur de l'ASCII passe de 44 à 251 Mo/s.
+
+Ce sont les chiffres d'une seule machine, pas de la CI. Les tableaux complets, les commandes et la comparaison avec la bibliothèque `utf8` native, lua-iconv et l'API Win32 sont dans [bench/RESULTS.md](./bench/RESULTS.md) (en anglais).
+
 ## 📊 Benchmark
 
 ```sh

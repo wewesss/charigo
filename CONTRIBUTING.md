@@ -15,9 +15,10 @@ lua tests/run.lua            # test suite against the source tree
 lua build.lua                # build dist/charigo.lua (not committed)
 lua tests/run.lua dist       # same suite against the bundle
 lua bench/run.lua --smoke    # short benchmark run, as in CI
+lua bench/compare.lua        # charigo against the native utf8 library, lua-iconv and the Win32 API
 ```
 
-Run the first three before opening a pull request. The smoke benchmark only checks that the script still works; a performance claim needs a real run (`lua bench/run.lua`) with the command and the date.
+Run the first three before opening a pull request. The smoke benchmark only checks that the script still works; a performance claim needs a real run (`lua bench/run.lua`, or `lua bench/compare.lua` for a comparison) with the command and the date. Results from the maintainers are in `bench/RESULTS.md`.
 
 ## Pull requests
 

@@ -1,11 +1,14 @@
 local u8 = require("charigo.utf8")
 
-local byte, char = string.byte, string.char
+local byte, char, find, gsub = string.byte, string.char, string.find, string.gsub
 local concat, unpack = table.concat, unpack or table.unpack
 local floor = math.floor
 
 local CHUNK = 4096
 local REPLACEMENT = 0xFFFD
+local HIGH = "[\128-\255]"
+local SEQUENCE = "[%z\1-\127\192-\255][\128-\191]*"
+local MEMO_LIMIT = 4096
 
 local KINDS = {
     ["utf-16le"] = { name = "utf-16le", order = "le" },
@@ -124,6 +127,68 @@ local M = {}
 function M.get(name)
     if type(name) ~= "string" then return nil end
     return KINDS[name:lower()]
+end
+
+local function unitBytes(u, be)
+    local hi, lo = floor(u / 256), u % 256
+    if be then return char(hi, lo) end
+    return char(lo, hi)
+end
+
+local function pairBytes(cp, be)
+    if cp < 0x10000 then return unitBytes(cp, be) end
+    local v = cp - 0x10000
+    return unitBytes(0xD800 + floor(v / 1024), be) .. unitBytes(0xDC00 + v % 1024, be)
+end
+
+local function codePointOf(seq)
+    local a, b, c, d = byte(seq, 1, 4)
+    if not b then return a end
+    if not c then return (a - 0xC0) * 64 + (b - 0x80) end
+    if not d then return (a - 0xE0) * 4096 + (b - 0x80) * 64 + (c - 0x80) end
+    return (a - 0xF0) * 262144 + (b - 0x80) * 4096 + (c - 0x80) * 64 + (d - 0x80)
+end
+
+local gsubTables = {}
+
+local function tablesFor(be)
+    local key = be and "be" or "le"
+    local cached = gsubTables[key]
+    if cached then return cached end
+    local ascii, memo, size = {}, {}, 0
+    for b = 0, 127 do
+        local v = pairBytes(b, be)
+        ascii[char(b)] = v
+        memo[char(b)] = v
+        size = size + 1
+    end
+    setmetatable(memo, {
+        __index = function(t, seq)
+            local v = pairBytes(codePointOf(seq), be)
+            if size < MEMO_LIMIT then
+                size = size + 1
+                rawset(t, seq, v)
+            end
+            return v
+        end,
+    })
+    cached = { ascii = ascii, memo = memo }
+    gsubTables[key] = cached
+    return cached
+end
+
+function M.fromUtf8(kind, bom)
+    local be = kind.order == "be"
+    local t = tablesFor(be)
+    local ascii, memo = t.ascii, t.memo
+    local prefix = (bom or kind.order == "auto") and pairBytes(0xFEFF, be) or ""
+    return function(s)
+        if not find(s, HIGH) then
+            return prefix .. (gsub(s, ".", ascii))
+        end
+        if not u8.valid(s) then return nil end
+        return prefix .. (gsub(s, SEQUENCE, memo))
+    end
 end
 
 local codecs = {}

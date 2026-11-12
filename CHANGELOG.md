@@ -7,6 +7,14 @@ All notable changes to charigo are documented here. The format follows [Keep a C
 ### Added
 
 - README badges, French README, release workflow, community files.
+- `bench/compare.lua`, which compares charigo with the native `utf8` library, lua-iconv and the Win32 API through LuaJIT ffi, and `bench/RESULTS.md` with local results.
+
+### Performance
+
+- ASCII shortcut for UTF-8 to Latin-1 and CP1252 on every runtime.
+- PUC Lua fast paths: UTF-8 to a single-byte set and UTF-8 to UTF-16 go through `gsub` on a table, with a bounded memo for UTF-16. LuaJIT keeps the plain loops.
+- Native validation on Lua 5.4: `valid` calls `utf8.len` first and falls back to the Lua scan for the error position.
+- Calibrated benchmark timer in `bench/run.lua`.
 
 ## [2.0.0] - 2026-11-09
 

@@ -4,7 +4,16 @@ local byte, char, find, gsub = string.byte, string.char, string.find, string.gsu
 local concat, unpack = table.concat, unpack or table.unpack
 
 local HIGH = "[\128-\255]"
+local SEQUENCE = "[\192-\255][\128-\191]*"
 local CHUNK = 4096
+local JIT = rawget(_G, "jit") ~= nil
+
+local missed = false
+local MISS = {
+    __index = function()
+        missed = true
+    end,
+}
 
 local function identityRange(t, from, to)
     for b = from, to do t[b - 0x7F] = b end
@@ -35,6 +44,7 @@ end
 
 local function build(name, high)
     local cs = { name = name, toCp = {}, fromCp = {}, utf8 = {} }
+    local reverse = {}
     for b = 0, 0x7F do
         cs.toCp[b] = b
         cs.fromCp[b] = b
@@ -44,7 +54,9 @@ local function build(name, high)
         cs.toCp[b] = cp
         cs.fromCp[cp] = b
         cs.utf8[char(b)] = encodeCp(cp)
+        reverse[cs.utf8[char(b)]] = char(b)
     end
+    cs.reverse = setmetatable(reverse, MISS)
     return cs
 end
 
@@ -114,6 +126,12 @@ local function encode(cs, cps, mode)
 end
 
 function M.fromUtf8(cs, s, mode)
+    if not find(s, HIGH) then return s end
+    if not JIT and u8.valid(s) then
+        missed = false
+        local out = gsub(s, SEQUENCE, cs.reverse)
+        if not missed then return out end
+    end
     return encode(cs, u8.decode(s, mode), mode)
 end
 

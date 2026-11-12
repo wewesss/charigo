@@ -14,7 +14,8 @@ else
 end
 
 local TARGET = smoke and 2048 or 1024 * 1024
-local REPEAT = smoke and 1 or 5
+local SAMPLES = smoke and 1 or 3
+local MIN_TIME = smoke and 0.005 or 0.2
 
 local function fill(unit)
     local parts, n, size = {}, 0, 0
@@ -33,26 +34,31 @@ local inputs = {
 }
 local order = { "ascii", "french", "emoji" }
 
-local function best(fn)
-    local top = math.huge
-    for _ = 1, REPEAT do
+local function rate(fn, bytes)
+    local top = 0
+    for _ = 1, SAMPLES do
+        local loops = 0
         local t0 = os.clock()
-        fn()
-        local dt = os.clock() - t0
-        if dt < top then top = dt end
+        local elapsed
+        repeat
+            fn()
+            loops = loops + 1
+            elapsed = os.clock() - t0
+        until elapsed >= MIN_TIME
+        local mbps = bytes * loops / 1048576 / elapsed
+        if mbps > top then top = mbps end
     end
-    if top <= 0 then top = 1e-9 end
     return top
 end
 
-local function report(scenario, kind, bytes, seconds)
-    print(("%-34s %-7s %9.1f MB/s"):format(scenario, kind, bytes / 1048576 / seconds))
+local function report(scenario, kind, mbps)
+    print(("%-34s %-7s %9.1f MB/s"):format(scenario, kind, mbps))
 end
 
 local function run(name, kind, s, fn)
     local out = fn(s)
     assert(type(out) == "string")
-    report(name, kind, #s, best(function() fn(s) end))
+    report(name, kind, rate(function() fn(s) end, #s))
 end
 
 print(("charigo %s, %s, input ~%d bytes%s"):format(
@@ -83,7 +89,7 @@ end
 
 for _, kind in ipairs(order) do
     local s = inputs[kind]
-    report("valid utf-8", kind, #s, best(function() assert(charigo.valid(s, "utf-8")) end))
+    report("valid utf-8", kind, rate(function() assert(charigo.valid(s, "utf-8")) end, #s))
 end
 
 for _, kind in ipairs(order) do
@@ -92,15 +98,13 @@ for _, kind in ipairs(order) do
     local small = s:sub(1, 64)
     while #small > 0 and not charigo.valid(small, "utf-8") do small = small:sub(1, -2) end
     local loops = smoke and 10 or 20000
-    local tConvert = best(function()
-        for _ = 1, loops do charigo.convert(small, "utf-8", "utf-16le") end
-    end)
-    local tConverter = best(function()
-        for _ = 1, loops do conv(small) end
-    end)
     local bytes = #small * loops
-    report("small convert utf-8 -> utf-16le", kind, bytes, tConvert)
-    report("small converter utf-8 -> utf-16le", kind, bytes, tConverter)
+    report("small convert utf-8 -> utf-16le", kind, rate(function()
+        for _ = 1, loops do charigo.convert(small, "utf-8", "utf-16le") end
+    end, bytes))
+    report("small converter utf-8 -> utf-16le", kind, rate(function()
+        for _ = 1, loops do conv(small) end
+    end, bytes))
 end
 
 os.exit(0)

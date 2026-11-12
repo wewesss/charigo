@@ -5,6 +5,8 @@ local sysos = require("charigo.os")
 
 local charigo = { _VERSION = "2.0.0" }
 
+local JIT = rawget(_G, "jit") ~= nil
+
 local function resolve(enc, bom)
     local name = type(enc) == "string" and enc:lower() or nil
     if name == "utf-8" or name == "utf8" then return u8, u8 end
@@ -57,6 +59,12 @@ function charigo.converter(from, to, opts)
     if srcId == u8 and dstId.toCp then
         return function(s) return sbcs.fromUtf8(dstId, s, mode) end
     end
+    if not JIT and srcId == u8 and dstId.order then
+        local fast = utf16.fromUtf8(dstId, bomOf(opts))
+        return function(s)
+            return fast(s) or encode(decode(s, mode), mode)
+        end
+    end
     return function(s)
         return encode(decode(s, mode), mode)
     end
@@ -79,6 +87,8 @@ function charigo.convert(s, from, to, opts)
 end
 
 charigo._sbcs = sbcs
+
+charigo._utf8 = u8
 
 charigo._os = sysos
 

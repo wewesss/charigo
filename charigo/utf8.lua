@@ -4,6 +4,11 @@ local floor = math.floor
 
 local HIGH = "[\128-\255]"
 local CHUNK = 4096
+local NATIVE_LEN
+if _VERSION == "Lua 5.4" and rawget(_G, "jit") == nil then
+    local lib = rawget(_G, "utf8")
+    if type(lib) == "table" then NATIVE_LEN = lib.len end
+end
 local REPLACEMENT = 0xFFFD
 
 local LEN, LO, HI = {}, {}, {}
@@ -90,7 +95,7 @@ function M.decode(s, mode)
     return out
 end
 
-function M.valid(s)
+local function validLua(s)
     local len = #s
     local i = 1
     while i <= len do
@@ -102,6 +107,13 @@ function M.valid(s)
     end
     return true
 end
+
+function M.valid(s)
+    if NATIVE_LEN and NATIVE_LEN(s) then return true end
+    return validLua(s)
+end
+
+M._validLua = validLua
 
 function M.encode(cps, mode)
     local b, m = {}, 0
